@@ -1,38 +1,40 @@
 import streamlit as st
 import tensorflow as tf
-from PIL import Image
 import numpy as np
+from PIL import Image
 import gdown
 import os
 
-# Title
-st.title("🧠 Kidney Stone Detection from Ultrasound Scan")
+st.title("🧠 Kidney Stone Predictor")
+st.write("Upload an ultrasound image to predict if it has kidney stones.")
 
-# Step 1: Download model from Google Drive (if not already present)
-model_path = "kidney_stone_model.keras"
-if not os.path.exists(model_path):
+# Model path & URL
+MODEL_URL = "https://drive.google.com/uc?id=1xZrR5K1kbiBUP6pBZqobpo0zwpLLEanJ"
+MODEL_PATH = "kidney_stone_model.keras"
+
+# Download model if not present
+if not os.path.exists(MODEL_PATH):
     with st.spinner("Downloading model..."):
-        gdown.download("https://drive.google.com/uc?id=1xZrR5K1kbiBUP6pBZqobpo0zwpLLEanJ", model_path, quiet=False)
+        gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
 
 # Load model
-model = tf.keras.models.load_model(model_path)
+model = tf.keras.models.load_model(MODEL_PATH)
 
-# Image upload
-uploaded_file = st.file_uploader("Upload an ultrasound image", type=["jpg", "png", "jpeg"])
-
+# Upload image
+uploaded_file = st.file_uploader("Upload Ultrasound Scan", type=["jpg", "jpeg", "png"])
 if uploaded_file:
-    image = Image.open(uploaded_file).convert("RGB")
-    st.image(image, caption="Uploaded Scan", use_column_width=True)
+    img = Image.open(uploaded_file).convert("RGB")
+    st.image(img, caption="Uploaded Scan", use_column_width=True)
 
     # Preprocess
-    img = image.resize((224, 224))
-    img_array = np.array(img) / 255.0
-    img_array = np.expand_dims(img_array, axis=0)
+    img = img.resize((224, 224))
+    img_array = np.expand_dims(np.array(img) / 255.0, axis=0)
 
     # Predict
-    prediction = model.predict(img_array)[0][0]
-    label = "🟠 Stone Detected" if prediction > 0.5 else "✅ No Stone Detected"
-    confidence = prediction if prediction > 0.5 else 1 - prediction
+    pred = model.predict(img_array)[0][0]
+    st.write(f"Prediction Score: `{pred:.4f}`")
 
-    st.markdown(f"### Prediction: {label}")
-    st.markdown(f"**Confidence:** {confidence * 100:.2f}%")
+    if pred > 0.5:
+        st.error("🛑 Stone Predicted")
+    else:
+        st.success("✅ No Stone Predicted")
